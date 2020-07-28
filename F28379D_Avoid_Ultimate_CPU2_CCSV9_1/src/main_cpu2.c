@@ -85,10 +85,10 @@ void main(void)
 
     f28379d_system_init();
 
-#ifdef _FLASH
     // Let CPU1 know that CPU2 is ready
+
     IpcRegs.IPCSET.bit.IPC7 = 1;       // Set IPC7 to release CPU1
-#endif
+
     init_ecap();
     GPIO_WritePin(PLAUSE_CHANNEL_1, 0);
     GPIO_WritePin(PLAUSE_CHANNEL_2, 0);
@@ -96,10 +96,11 @@ void main(void)
     scib_pdev = sci_new_dev(SCIB,115200);
     //    __scib_fifo_init(115200);
 
-    // 响应并清除IPC1中断接收标志位
+    // 清除IPC1标志位
     IpcRegs.IPCACK.bit.IPC1 = 1;
+//    IpcRegs.IPCCLR.bit.IPC1 = 1;
 
-    scib_pdev->master->write_string(scib_pdev,"Start\r\n",-1);
+//    scib_pdev->master->write_string(scib_pdev,"Start\r\n",-1);
 
     //        StartCpuTimer0();
     StartCpuTimer1();
@@ -110,6 +111,7 @@ void main(void)
         //    start_plause_channel_1(1);
         detect_program_begin();
         DELAY_MS(100);
+
 
     }
 }
@@ -179,6 +181,8 @@ void f28379d_system_init(void)
     PieCtrlRegs.PIEIER4.bit.INTx2 = 1;
     PieCtrlRegs.PIEIER4.bit.INTx3 = 1;
 
+    //    IpcRegs.IPCACK.bit.IPC1 = 1;
+    //    IpcRegs.IPCCLR.bit.IPC1 = 1;
 
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1 | PIEACK_GROUP4 | PIEACK_GROUP9;
 
@@ -209,9 +213,10 @@ interrupt void ipc1_isr(void)
     // Read back ADC-A0 results and store in circular buffer
     cpu2_rev_cpu1_data = (Uint32) IpcRegs.IPCRECVDATA;
     uint2hex(cpu2_rev_cpu1_data, comm_data);
-    scib_pdev->master->write_string(scib_pdev,"\t\t\t\t",-1);
+    scib_pdev->master->write_string(scib_pdev,"#@",-1);
     scib_pdev->master->write_string(scib_pdev,comm_data,-1);
-    scib_pdev->master->write_string(scib_pdev,"\r\n",-1);
+    scib_pdev->master->write_string(scib_pdev,"@#\r\n",-1);
+
     // Return from interrupt
     IpcRegs.IPCACK.bit.IPC1 = 1;                // Clear IPC1 bit
     PieCtrlRegs.PIEACK.all |= PIEACK_GROUP1;     // Acknowledge PIE group 1 to enable further interrupts
@@ -336,6 +341,13 @@ void detect_program_begin()
     ecap.ecap2_distance_float = (double)ecap.ecap2_time_us * 1.5 / 1000.0 / 2.0;
     ecap.ecap3_distance_float = (double)ecap.ecap3_time_us * 1.5 / 1000.0 / 2.0;
 
+    if(ecap.ecap1_distance_float > 9.99)
+        ecap.ecap1_distance_float = 9.99;
+    if(ecap.ecap2_distance_float > 9.99)
+            ecap.ecap2_distance_float = 9.99;
+    if(ecap.ecap3_distance_float > 9.99)
+            ecap.ecap3_distance_float = 9.99;
+
     ecap.ecap1_time_us = 0;
     ecap.ecap1_time_ns = 0;
     ecap.ecap2_time_us = 0;
@@ -347,13 +359,13 @@ void detect_program_begin()
     floatTochar(ecap.ecap2_distance_float,ecap.ecap2_distance,2);
     floatTochar(ecap.ecap3_distance_float,ecap.ecap3_distance,2);
 
-    scib_pdev->master->write_string(scib_pdev,"distance: ",-1);
+    scib_pdev->master->write_string(scib_pdev,"%&#",-1);
     scib_pdev->master->write_string(scib_pdev,ecap.ecap1_distance,-1);
-    scib_pdev->master->write_string(scib_pdev,"m ",-1);
+    scib_pdev->master->write_string(scib_pdev,"#",-1);
     scib_pdev->master->write_string(scib_pdev,ecap.ecap2_distance,-1);
-    scib_pdev->master->write_string(scib_pdev,"m ",-1);
+    scib_pdev->master->write_string(scib_pdev,"#",-1);
     scib_pdev->master->write_string(scib_pdev,ecap.ecap3_distance,-1);
-    scib_pdev->master->write_string(scib_pdev,"m \r\n",-1);
+    scib_pdev->master->write_string(scib_pdev,"&%\r\n",-1);
 
 }
 

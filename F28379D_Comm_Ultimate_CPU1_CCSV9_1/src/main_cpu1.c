@@ -105,13 +105,14 @@ void main(void)
     memset(Adca0Results, 0, sizeof(Adca0Results));
     start_adc();
     DELAY_US(10);
-#ifndef TEST
+#ifdef TEST
     while(1){
         while(Adca0Results[results0Index]<3000);
         while(results0Index<(RESULTS0_BUFFER_SIZE-10));
         stop_adc();
         memset(Adca0Results, 0, sizeof(Adca0Results));
         results0Index=0;
+        start_adc();
     }
 #endif
     while(1)
